@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/hokaccha/go-prettyjson"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh/terminal"
 )
@@ -37,7 +38,7 @@ func promptPassword() error {
 	if err != nil {
 		return err
 	}
-	flg.Password = string(passDb)
+	config["password"] = string(passDb)
 	println()
 	return nil
 }
@@ -45,21 +46,53 @@ func promptPassword() error {
 func checkAutoFill() {
 	switch flg.Driver {
 	case "mongo":
-		if flg.Host == "" {
-			flg.Host = "localhost:27017"
+		if config["host"] == "" {
+			config["host"] = "localhost:27017"
 		}
-		if flg.DBName == "" {
-			flg.DBName = "xsaas_ctms"
+		if config["dbName"] == "" {
+			config["dbName"] = "xsaas_ctms"
 		}
 	case "mysql":
-		if flg.Host == "" {
-			flg.Host = "localhost:3306"
+		if config["host"] == "" {
+			config["host"] = "localhost:3306"
 		}
-		if flg.DBName == "" {
-			flg.DBName = "mqtt"
+		if config["dbName"] == "" {
+			config["dbName"] = "mqtt"
 		}
-		if flg.Username == "" {
-			flg.Username = "root"
+		if config["username"] == "" {
+			config["username"] = "root"
 		}
 	}
+}
+
+func printPretty(result interface{}) error {
+	v, err := prettyjson.Marshal(result)
+	if err != nil {
+		return err
+	}
+	fmt.Println(string(v))
+	return nil
+}
+
+func doPrint(result interface{}) error {
+	if flg.Pretty {
+		if err := printPretty(result); err != nil {
+			return err
+		}
+		return nil
+	}
+
+	fmt.Printf("%v\n", result)
+	return nil
+}
+
+func getFlags(cmd *cobra.Command) error {
+	for key := range config {
+		v, err := cmd.Flags().GetString(key)
+		if err != nil {
+			return err
+		}
+		config[key] = v
+	}
+	return nil
 }

@@ -1,39 +1,37 @@
 package mongo
 
 import (
-	"fmt"
 	"log"
 
 	"github.com/globalsign/mgo"
-	"github.com/hokaccha/go-prettyjson"
 	"github.com/isollaa/conn/status"
 )
 
-type mongo struct {
+type Mongo struct {
 	// status.Attribute
 	DBName     string
 	Collection string
 	Session    *mgo.Session
 }
 
-func (m *mongo) Connect(c map[string]string) error {
+func (m *Mongo) Connect(c map[string]string) error {
 	// func (m *mongo) Connect(c *status.Config) error {
 	session, err := mgo.Dial(c["host"])
 	if err != nil {
 		return err
 	}
-	m.DBName = c["username"]
+	m.DBName = c["dbName"]
 	m.Collection = c["collection"]
 	// m.Attribute = *c.Attribute
 	m.Session = session
 	return nil
 }
 
-func (m *mongo) Close() {
+func (m *Mongo) Close() {
 	defer m.Session.Close()
 }
 
-func (m *mongo) Ping() error {
+func (m *Mongo) Ping() error {
 	err := m.Session.Ping()
 	if err != nil {
 		return err
@@ -43,30 +41,22 @@ func (m *mongo) Ping() error {
 	return nil
 }
 
-func (m *mongo) ListDB() error {
-	result := []string{}
+func (m *Mongo) ListDB() (interface{}, error) {
 	result, err := m.Session.DatabaseNames()
 	if err != nil {
-		return err
+		return result, err
 	}
-
-	v, _ := prettyjson.Marshal(result)
-	fmt.Println(string(v))
-	return nil
+	return result, nil
 }
 
-func (m *mongo) ListColl() error {
-	result := []string{}
+func (m *Mongo) ListColl() (interface{}, error) {
 	result, err := m.Session.DB(m.DBName).CollectionNames()
 	if err != nil {
-		return err
+		return result, err
 	}
-
-	v, _ := prettyjson.Marshal(result)
-	fmt.Println("Collections:", string(v))
-	return nil
+	return result, nil
 }
 
 func New() status.CommonFeature {
-	return &mongo{}
+	return &Mongo{}
 }

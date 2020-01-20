@@ -11,13 +11,11 @@ import (
 func doCommand(cmd *cobra.Command, commandFunc func(status.CommonFeature) error) error {
 	println(cmd.Short, "\n")
 	svc := status.New(flg.Driver)
-	err := connect(svc)
-	if err != nil {
+	if err := connect(svc); err != nil {
 		return err
 	}
 	defer svc.Close()
-	err = commandFunc(svc)
-	if err != nil {
+	if err := commandFunc(svc); err != nil {
 		return err
 	}
 	return nil
@@ -26,56 +24,47 @@ func doCommand(cmd *cobra.Command, commandFunc func(status.CommonFeature) error)
 func connect(svc status.CommonFeature) error {
 	println("--", flg.Driver)
 	if flg.Prompt {
-		err := promptPassword()
-		if err != nil {
+		if err := promptPassword(); err != nil {
 			return err
 		}
 	}
 	checkAutoFill()
-	// err := svc.Connect(&status.Config{
-	// 	Host:     flg.Host,
-	// 	Username: flg.Username,
-	// 	Password: flg.Password,
-	// 	Attribute: &status.Attribute{
-	// 		DBName:     flg.DBName,
-	// 		Collection: flg.Collection,
-	// 	},
-	// })
-	err := svc.Connect(map[string]string{
-		"host":       flg.Host,
-		"username":   flg.Username,
-		"password":   flg.Password,
-		"dbName":     flg.DBName,
-		"collection": flg.Collection,
-	})
-	if err != nil {
+	if err := svc.Connect(config); err != nil {
 		return err
 	}
 	return nil
 }
 
 func ping(svc status.CommonFeature) error {
-	log.Printf("Pinging %s ", flg.Host)
-	err := svc.Ping()
-	if err != nil {
+	log.Printf("Pinging %s ", config["host"])
+	if err := svc.Ping(); err != nil {
 		return err
 	}
+
 	return nil
 }
 
 func listDB(svc status.CommonFeature) error {
-	err := svc.ListDB()
+	v, err := svc.ListDB()
 	if err != nil {
 		return err
 	}
+	if err = doPrint(v); err != nil {
+		return err
+	}
+
 	return nil
 }
 
 func listColl(svc status.CommonFeature) error {
-	err := svc.ListColl()
+	v, err := svc.ListColl()
 	if err != nil {
 		return err
 	}
+	if err = doPrint(v); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -85,8 +74,11 @@ func infoDB(svc status.CommonFeature) error {
 		valid := false
 		for k := range listInfo {
 			if flg.Stat == k {
-				err := nsvc.Info(str)
+				v, err := nsvc.Info(str)
 				if err != nil {
+					return err
+				}
+				if err = doPrint(v); err != nil {
 					return err
 				}
 				valid = true
@@ -108,13 +100,20 @@ func infoDB(svc status.CommonFeature) error {
 
 func statusDB(svc status.CommonFeature) error {
 	if nsvc, supported := svc.(status.NoSQLFeature); supported {
-		var err error
 		if flg.Stat != "" {
+			var (
+				err error
+				v   interface{}
+			)
 			switch flg.Stat {
 			case "collstats":
-				err = nsvc.CollStats()
+				if v, err = nsvc.CollStats(); err != nil {
+					return err
+				}
 			case "dbstats":
-				err = nsvc.DbStats()
+				if v, err = nsvc.DbStats(); err != nil {
+					return err
+				}
 			default:
 				fmt.Printf("Error: flag with argument '%s' not found \n\nTry using:\n", flg.Stat)
 				for k, v := range listStatus {
@@ -122,9 +121,9 @@ func statusDB(svc status.CommonFeature) error {
 				}
 				println()
 			}
-		}
-		if err != nil {
-			return err
+			if err = doPrint(v); err != nil {
+				return err
+			}
 		}
 	} else {
 		fmt.Printf("--%s : status not available", flg.Driver)

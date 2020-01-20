@@ -13,12 +13,15 @@ var cmdPing = cobra.Command{
 	Use:   "ping",
 	Short: "Check ping of selected connection",
 	Run: func(cmd *cobra.Command, args []string) {
+		if err := getFlags(cmd); err != nil {
+			fmt.Print(err)
+			return
+		}
 		if flg.Driver == "" {
 			fmt.Printf("Error: command needs flag with argument: -d \nUsage:\n\tapp %s [flags]n\nUse app --help to show help for status\n\n", cmd.Use)
 			return
 		}
-		err := doCommand(cmd, ping)
-		if err != nil {
+		if err := doCommand(cmd, ping); err != nil {
 			log.Print(err)
 		}
 	},
@@ -28,24 +31,25 @@ var cmdDB = cobra.Command{
 	Use:   "list",
 	Short: "list available database attributes",
 	Run: func(cmd *cobra.Command, args []string) {
-		err := requirementCheck(cmd)
-		if err != nil {
+		if err := getFlags(cmd); err != nil {
+			fmt.Print(err)
+			return
+		}
+		if err := requirementCheck(cmd); err != nil {
 			fmt.Print(err)
 			return
 		}
 		switch flg.Stat {
 		case "db":
-			err := doCommand(cmd, listDB)
-			if err != nil {
+			if err := doCommand(cmd, listDB); err != nil {
 				log.Print(err)
 			}
 		case "coll":
-			if flg.DBName == "" {
+			if config["dbName"] == "" {
 				fmt.Printf("Error: command needs flag with argument: -d -a --db\nUsage:\n\tapp %s [flags][flags]\n\nUse app --help to show help for status\n\n", cmd.Use)
 				return
 			}
-			err := doCommand(cmd, listColl)
-			if err != nil {
+			if err := doCommand(cmd, listColl); err != nil {
 				log.Print(err)
 			}
 		default:
@@ -62,13 +66,15 @@ var cmdInfo = cobra.Command{
 	Use:   "info",
 	Short: "Get information of selected connection",
 	Run: func(cmd *cobra.Command, args []string) {
-		err := requirementCheck(cmd)
-		if err != nil {
+		if err := getFlags(cmd); err != nil {
 			fmt.Print(err)
 			return
 		}
-		err = doCommand(cmd, infoDB)
-		if err != nil {
+		if err := requirementCheck(cmd); err != nil {
+			fmt.Print(err)
+			return
+		}
+		if err := doCommand(cmd, infoDB); err != nil {
 			log.Print(err)
 		}
 	},
@@ -78,46 +84,49 @@ var cmdStatus = cobra.Command{
 	Use:   "status",
 	Short: "Get status of selected connection",
 	Run: func(cmd *cobra.Command, args []string) {
-		err := requirementCheck(cmd)
-		if err != nil {
+		if err := getFlags(cmd); err != nil {
 			fmt.Print(err)
 			return
 		}
-		err = doCommand(cmd, statusDB)
-		if err != nil {
+		if err := requirementCheck(cmd); err != nil {
+			fmt.Print(err)
+			return
+		}
+		if err := doCommand(cmd, statusDB); err != nil {
 			log.Print(err)
 		}
 	},
 }
 
 type attrib struct {
-	Driver     string
-	Host       string
-	Username   string
-	Password   string
-	DBName     string
-	Collection string
-	Stat       string
-	Prompt     bool
+	Driver string
+	Stat   string
+	Pretty bool
+	Prompt bool
 }
 
 var flg attrib
 
+var config = map[string]string{
+	"host":       "",
+	"username":   "",
+	"password":   "",
+	"dbName":     "",
+	"collection": "",
+}
+
 func init() {
 	//global
-	rootCmd.PersistentFlags().StringVarP(&flg.Driver, "driver", "d", "", "connection driver name (mongo / mysql)")                              // mongo || mysql
-	rootCmd.PersistentFlags().StringVarP(&flg.Host, "host", "H", "", "connection host (default- mongo:localhost:27017 / mysql:localhost:3306)") // localhost:27017 || localhost:3306
-	rootCmd.PersistentFlags().StringVar(&flg.DBName, "db", "", "connection database name (default- mongo:xsaas_ctms / mysql:mqtt)")             // xsaas_ctms || mqtt
-	rootCmd.PersistentFlags().StringVarP(&flg.Collection, "collection", "c", "", "connection database collection name")
+	rootCmd.PersistentFlags().StringP("host", "H", "", "connection host (default- mongo:localhost:27017 / mysql:localhost:3306)") // localhost:27017 || localhost:3306
+	rootCmd.PersistentFlags().StringP("username", "u", "", "database username (default- mysql: root)")
+	rootCmd.PersistentFlags().String("dbName", "", "connection database name (default- mongo:xsaas_ctms / mysql:mqtt)") // xsaas_ctms || mqtt
+	rootCmd.PersistentFlags().StringP("collection", "c", "", "connection database collection name")
+	rootCmd.PersistentFlags().StringVarP(&flg.Driver, "driver", "d", "", "connection driver name (mongo / mysql)") // mongo || mysql
 	rootCmd.PersistentFlags().StringVarP(&flg.Stat, "info", "i", "", "connection information")
-	rootCmd.PersistentFlags().StringVarP(&flg.Username, "username", "u", "", "database username (default- mysql: root)")
+
+	//optional
+	rootCmd.PersistentFlags().BoolVarP(&flg.Pretty, "pretty", "P", false, "show pretty version of json")
 	rootCmd.PersistentFlags().BoolVarP(&flg.Prompt, "password", "p", false, "call password prompt")
-	//local
-	// cmdInfo.PersistentFlags().StringVarP(opt["stat"], "info", "i", "", "connection information")
-	// cmdStatus.PersistentFlags().StringVarP(opt["stat"], "status", "s", "", "connection status")
-	// // cmdStatus.MarkFlagRequired("db")
-	// // cmdStatus.MarkFlagRequired("status")
-	// cmdDB.PersistentFlags().StringVarP(opt["stat"], "attribute", "a", "", "attribute db to show")
 }
 
 func Exec() {

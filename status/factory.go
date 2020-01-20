@@ -19,15 +19,15 @@ type CommonFeature interface {
 	Connect(map[string]string) error
 	Close()
 	Ping() error
-	ListDB() error
-	ListColl() error
+	ListDB() (interface{}, error)
+	ListColl() (interface{}, error)
 }
 
 type NoSQLFeature interface {
 	CommonFeature
-	DbStats() error
-	Info(info string) error
-	CollStats() error
+	DbStats() (interface{}, error)
+	Info(info string) (interface{}, error)
+	CollStats() (interface{}, error)
 }
 
 type factory func() CommonFeature
