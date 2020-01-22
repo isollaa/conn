@@ -8,7 +8,8 @@ import (
 
 const (
 	driver     = "mongo"
-	host       = "localhost:27017"
+	host       = "localhost"
+	port       = "27017"
 	username   = ""
 	password   = ""
 	dbName     = "xsaas_ctms"
@@ -33,25 +34,21 @@ func TestPrintPretty(t *testing.T) {
 
 func TestConnect(t *testing.T) {
 	svc = &mongo.Mongo{}
-	err := svc.Connect(map[string]string{
+	svc.Connect(map[string]string{
+		"driver":     driver,
 		"host":       host,
+		"port":       port,
 		"username":   username,
 		"password":   password,
 		"dbName":     dbName,
 		"collection": collection,
 	})
-	if err != nil {
-		t.Log(err)
-	}
 }
 
 func TestPing(t *testing.T) {
 	TestConnect(t)
 	defer svc.Close()
-	err := ping(svc)
-	if err != nil {
-		t.Log(err)
-	}
+	ping(svc)
 }
 
 func TestListDB(t *testing.T) {

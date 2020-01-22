@@ -6,18 +6,21 @@ import (
 
 const (
 	driver     = "mongo"
-	host       = "localhost:27017"
+	host       = "localhost"
+	port       = "27017"
 	username   = ""
 	password   = ""
 	dbName     = "xsaas_ctms"
-	collection = "relationship"
+	collection = "project_form"
 )
 
 var m Mongo
 
 func TestConnect(t *testing.T) {
 	m.Connect(map[string]string{
+		"driver":     driver,
 		"host":       host,
+		"port":       port,
 		"username":   username,
 		"password":   password,
 		"dbName":     dbName,

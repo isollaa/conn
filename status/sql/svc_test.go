@@ -3,19 +3,22 @@ package sql
 import "testing"
 
 const (
-	driver     = "mysql"
-	host       = "localhost:3306"
-	username   = "root"
-	password   = ""
+	driver     = /* "mysql"  */ "postgres"
+	host       = "localhost"
+	port       = /* "3306" */ "5432"
+	username   = /* "root" */ "postgres"
+	password   = /* "" */ "12345"
 	dbName     = "mqtt"
-	collection = "relationship"
+	collection = "listclient"
 )
 
 var m SQL
 
 func TestConnect(t *testing.T) {
 	m.Connect(map[string]string{
+		"driver":     driver,
 		"host":       host,
+		"port":       port,
 		"username":   username,
 		"password":   password,
 		"dbName":     dbName,
@@ -39,4 +42,10 @@ func TestListColl(t *testing.T) {
 	TestConnect(t)
 	defer m.Close()
 	m.ListColl()
+}
+
+func TestDiscSpace(t *testing.T) {
+	TestConnect(t)
+	defer m.Close()
+	m.DiskSpace("db")
 }
