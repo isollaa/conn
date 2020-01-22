@@ -18,16 +18,19 @@ type CommonFeature interface {
 	// Connect(*Config) error
 	Connect(map[string]string) error
 	Close()
-	Ping() error
+	Ping() (interface{}, error)
 	ListDB() (interface{}, error)
 	ListColl() (interface{}, error)
 }
 
 type NoSQLFeature interface {
-	CommonFeature
 	DbStats() (interface{}, error)
 	Info(info string) (interface{}, error)
 	CollStats() (interface{}, error)
+}
+
+type SQLFeature interface {
+	DiskSpace(info string) (interface{}, error)
 }
 
 type factory func() CommonFeature

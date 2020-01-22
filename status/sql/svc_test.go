@@ -1,4 +1,4 @@
-package mysql
+package sql
 
 import "testing"
 
@@ -11,7 +11,7 @@ const (
 	collection = "relationship"
 )
 
-var m Mysql
+var m SQL
 
 func TestConnect(t *testing.T) {
 	m.Connect(map[string]string{

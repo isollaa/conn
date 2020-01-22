@@ -1,53 +1,60 @@
-package mysql
+package sql
 
 import (
 	"database/sql"
 	"fmt"
-	"log"
 
 	_ "github.com/go-sql-driver/mysql"
 
 	"github.com/isollaa/conn/status"
 )
 
-type Mysql struct {
-	// status.Attribute
+type SQL struct {
+	Driver     string
 	DBName     string
 	Collection string
 	Session    *sql.DB
 }
 
-func (m *Mysql) Connect(c map[string]string) error {
-	// func (m *mysql) Connect(c *status.Config) error {
-	source := fmt.Sprintf("%s:%s@tcp(%s)/%s", c["username"], c["password"], c["host"], c["dbName"])
-	session, err := sql.Open("mysql", source)
+var cfg *Config
+
+func (m *SQL) Connect(c map[string]string) error {
+	var err error
+	cfg = &Config{
+		Driver:     c["driver"],
+		Host:       c["host"],
+		Port:       c["port"],
+		Username:   c["username"],
+		Password:   c["password"],
+		DBName:     c["dbName"],
+		Collection: c["collection"],
+	}
+	m.Session, err = sql.Open(cfg.Driver, cfg.GetSource())
 	if err != nil {
 		return err
 	}
-	m.DBName = c["dbName"]
-	m.Collection = c["collection"]
-	// m.Attribute = *c.Attribute
-	m.Session = session
+	m.Driver = cfg.Driver
+	m.DBName = cfg.DBName
+	m.Collection = cfg.Collection
 	return nil
 }
 
-func (m *Mysql) Close() {
+func (m *SQL) Close() {
 	defer m.Session.Close()
 }
 
-func (m *Mysql) Ping() error {
+func (m *SQL) Ping() (interface{}, error) {
 	err := m.Session.Ping()
 	if err != nil {
-		return err
+		return nil, err
 	}
-	log.Print("- Mysql server is ok.")
 
-	return nil
+	return fmt.Sprintf("-- %s server is ok.", m.Driver), nil
 }
 
-func (m *Mysql) ListDB() (interface{}, error) {
+func (m *SQL) ListDB() (interface{}, error) {
 	dbNames := []string{}
-	rows, err := m.Session.Query("SHOW DATABASES")
+	rows, err := m.Session.Query(cfg.GetQueryDB())
 	if err != nil {
 		return dbNames, err
 	}
@@ -63,18 +70,19 @@ func (m *Mysql) ListDB() (interface{}, error) {
 	return dbNames, nil
 }
 
-func (m *Mysql) ListColl() (interface{}, error) {
+func (m *SQL) ListColl() (interface{}, error) {
 	tables := []string{}
-	res, err := m.Session.Query("SHOW TABLES")
+	rows, err := m.Session.Query(cfg.GetQueryTable())
 	if err != nil {
 		return tables, err
 	}
-	for res.Next() {
+	defer rows.Close()
+	for rows.Next() {
 		table := ""
-		res.Scan(&table)
+		rows.Scan(&table)
 		tables = append(tables, table)
 	}
-	return tables, err
+	return tables, nil
 }
 
 // func (m *mysql) CollData() error {
@@ -101,5 +109,5 @@ func (m *Mysql) ListColl() (interface{}, error) {
 // }
 
 func New() status.CommonFeature {
-	return &Mysql{}
+	return &SQL{}
 }
