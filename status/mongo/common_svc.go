@@ -31,16 +31,16 @@ func (m *Mongo) Close() {
 	defer m.Session.Close()
 }
 
-func (m *Mongo) Ping() (interface{}, error) {
+func (m *Mongo) Ping() (string, error) {
 	err := m.Session.Ping()
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	return fmt.Sprintf("-- MongoDB server is ok."), nil
 }
 
-func (m *Mongo) ListDB() (interface{}, error) {
+func (m *Mongo) ListDB() ([]string, error) {
 	result, err := m.Session.DatabaseNames()
 	if err != nil {
 		return result, err
@@ -48,7 +48,7 @@ func (m *Mongo) ListDB() (interface{}, error) {
 	return result, nil
 }
 
-func (m *Mongo) ListColl() (interface{}, error) {
+func (m *Mongo) ListColl() ([]string, error) {
 	result, err := m.Session.DB(m.DBName).CollectionNames()
 	if err != nil {
 		return result, err

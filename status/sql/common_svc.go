@@ -43,16 +43,16 @@ func (m *SQL) Close() {
 	defer m.Session.Close()
 }
 
-func (m *SQL) Ping() (interface{}, error) {
+func (m *SQL) Ping() (string, error) {
 	err := m.Session.Ping()
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	return fmt.Sprintf("-- %s server is ok.", m.Driver), nil
 }
 
-func (m *SQL) ListDB() (interface{}, error) {
+func (m *SQL) ListDB() ([]string, error) {
 	dbNames := []string{}
 	rows, err := m.Session.Query(cfg.GetQueryDB())
 	if err != nil {
@@ -70,7 +70,7 @@ func (m *SQL) ListDB() (interface{}, error) {
 	return dbNames, nil
 }
 
-func (m *SQL) ListColl() (interface{}, error) {
+func (m *SQL) ListColl() ([]string, error) {
 	tables := []string{}
 	rows, err := m.Session.Query(cfg.GetQueryTable())
 	if err != nil {

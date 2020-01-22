@@ -4,7 +4,7 @@ import (
 	"github.com/globalsign/mgo/bson"
 )
 
-func (m *Mongo) Info(info string) (interface{}, error) {
+func (m *Mongo) Info(info string) (bson.M, error) {
 	result := bson.M{}
 	err := m.Session.DB("admin").Run(bson.D{{info, 1}}, &result)
 	if err != nil {
@@ -13,7 +13,7 @@ func (m *Mongo) Info(info string) (interface{}, error) {
 	return result, nil
 }
 
-func (m *Mongo) CollStats() (interface{}, error) {
+func (m *Mongo) CollStats() (bson.M, error) {
 	result := bson.M{}
 	err := m.Session.DB(m.DBName).Run(&bson.D{bson.DocElem{"collstats", m.Collection}}, &result)
 	if err != nil {
@@ -22,7 +22,7 @@ func (m *Mongo) CollStats() (interface{}, error) {
 	return result, nil
 }
 
-func (m *Mongo) DbStats() (interface{}, error) {
+func (m *Mongo) DbStats() (bson.M, error) {
 	result := bson.M{}
 	err := m.Session.DB(m.DBName).Run("dbstats", &result)
 	if err != nil {

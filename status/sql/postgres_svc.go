@@ -2,7 +2,7 @@ package sql
 
 import "fmt"
 
-func (m *SQL) DiskSpace(info string) (interface{}, error) {
+func (m *SQL) DiskSpace(info string) (string, error) {
 	if m.Driver == "postgres" {
 		table := ""
 		msg, query := cfg.GetDiskSpace(info)
