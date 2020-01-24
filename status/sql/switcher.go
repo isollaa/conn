@@ -1,36 +1,30 @@
 package sql
 
 import (
+	"errors"
 	"fmt"
 
 	_ "github.com/go-sql-driver/mysql"
+	s "github.com/isollaa/conn/status"
 	_ "github.com/lib/pq"
 )
 
-type Config struct {
-	Driver     string
-	Host       string
-	Port       string
-	Username   string
-	Password   string
-	DBName     string
-	Collection string
-}
+type SQLConf map[string]interface{}
 
-func (c *Config) GetSource() string {
+func (c SQLConf) GetSource() string {
 	source := ""
-	switch c.Driver {
+	switch c[s.DRIVER] {
 	case "mysql":
-		source = fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", c.Username, c.Password, c.Host, c.Port, c.DBName)
+		source = fmt.Sprintf("%s:%s@tcp(%s:%d)/%s", c[s.USERNAME], c[s.PASSWORD], c[s.HOST], c[s.PORT], c[s.DBNAME])
 	case "postgres":
-		source = fmt.Sprintf("host=%s port=%s user=%s "+"password=%s dbname=%s sslmode=disable", c.Host, c.Port, c.Username, c.Password, c.DBName)
+		source = fmt.Sprintf("host=%s port=%d user=%s "+"password=%s dbname=%s sslmode=disable", c[s.HOST], c[s.PORT], c[s.USERNAME], c[s.PASSWORD], c[s.DBNAME])
 	}
 	return source
 }
 
-func (c *Config) GetQueryDB() string {
+func (c SQLConf) GetQueryDB() string {
 	query := ""
-	switch c.Driver {
+	switch c[s.DRIVER] {
 	case "mysql":
 		query = "SHOW DATABASES"
 	case "postgres":
@@ -39,9 +33,9 @@ func (c *Config) GetQueryDB() string {
 	return query
 }
 
-func (c *Config) GetQueryTable() string {
+func (c SQLConf) GetQueryTable() string {
 	query := ""
-	switch c.Driver {
+	switch c[s.DRIVER] {
 	case "mysql":
 		query = "SHOW TABLES"
 	case "postgres":
@@ -50,17 +44,28 @@ func (c *Config) GetQueryTable() string {
 	return query
 }
 
-func (c *Config) GetDiskSpace(info string) (string, string) {
-	msg := ""
-	switch info {
-	case "db":
-		info = "pg_database_size"
-		msg = "DB - " + c.DBName
-	case "coll":
-		info = "pg_total_relation_size"
-		c.DBName = c.Collection
-		msg = "Table - " + c.Collection
+func (c SQLConf) GetDiskSpace(info string) (map[string]string, error) {
+	v := map[string]string{}
+	switch c[s.DRIVER] {
+	case "mysql":
+		switch info {
+		case "db":
+			return v, errors.New("disk status not available")
+		case "coll":
+			v["title"] = fmt.Sprintf("Table - %s", c[s.COLLECTION])
+			v["query"] = fmt.Sprintf("SELECT (data_length+index_length)/power(1024,1) FROM information_schema.tables WHERE table_schema='%s' and table_name='%s'", c[s.DBNAME], c[s.COLLECTION])
+		}
+	case "postgres":
+		switch info {
+		case "db":
+			info = "pg_database_size"
+			v["title"] = "DB - " + c[s.DBNAME].(string)
+		case "coll":
+			info = "pg_total_relation_size"
+			c[s.DBNAME] = c[s.COLLECTION].(string)
+			v["title"] = fmt.Sprintf("Table - %s", c[s.COLLECTION])
+		}
+		v["query"] = fmt.Sprintf("SELECT pg_size_pretty(%s('%s'))", info, c[s.DBNAME])
 	}
-	query := fmt.Sprintf("SELECT pg_size_pretty(%s('%s'))", info, c.DBName)
-	return msg, query
+	return v, nil
 }

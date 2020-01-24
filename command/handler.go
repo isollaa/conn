@@ -4,34 +4,37 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/isollaa/conn/status"
-	"github.com/spf13/cobra"
+	s "github.com/isollaa/conn/status"
 )
 
-func doCommand(cmd *cobra.Command, commandFunc func(status.CommonFeature) (interface{}, error)) error {
-	println(cmd.Short, "\n")
-	driver := config["driver"]
+func doCommand(commandFunc func(s.CommonFeature) error) {
+	if err := requirementCheck(s.DRIVER); err != nil {
+		log.Print("error: ", err)
+		return
+	}
+	driver := config[s.DRIVER]
 	if driver == "postgres" || driver == "mysql" {
 		driver = "sql"
 	}
-	svc := status.New(driver)
+	svc := s.New(driver.(string))
 	if err := connect(svc); err != nil {
-		return err
+		log.Print("unable to connect: ", err)
+		return
 	}
 	defer svc.Close()
-	v, err := commandFunc(svc)
-	if err != nil || v == nil {
-		return err
+	if err := commandFunc(svc); err != nil {
+		log.Print("error due executing command: ", err)
+		return
 	}
-	if err = doPrint(v); err != nil {
-		return err
+	if err := doPrint(svc); err != nil {
+		log.Print("unable to print: ", err)
+		return
 	}
-	return nil
 }
 
-func connect(svc status.CommonFeature) error {
-	println("--", config["driver"])
-	if flg.Prompt {
+func connect(svc s.CommonFeature) error {
+	fmt.Printf("--%s\n", config[s.DRIVER])
+	if flg.prompt {
 		if err := promptPassword(); err != nil {
 			return err
 		}
@@ -43,104 +46,94 @@ func connect(svc status.CommonFeature) error {
 	return nil
 }
 
-func ping(svc status.CommonFeature) (interface{}, error) {
-	log.Printf("Pinging %s ", config["host"])
-	v, err := svc.Ping()
+func ping(svc s.CommonFeature) error {
+	log.Printf("Pinging %s ", config[s.HOST])
+	err := svc.Ping()
 	if err != nil {
-		return v, err
+		return err
 	}
-
-	return v, nil
+	return nil
 }
 
-func listDB(svc status.CommonFeature) (interface{}, error) {
-	v, err := svc.ListDB()
-	if err != nil {
-		return v, err
+func list(svc s.CommonFeature) error {
+	if err := requirementCheck(s.DBNAME); err != nil {
+		return err
+	}
+	switch flg.stat {
+	case DB:
+		err := svc.ListDB()
+		if err != nil {
+			return err
+		}
+	case COLL:
+		if err := requirementCheck(s.COLLECTION); err != nil {
+			return err
+		}
+		err := svc.ListColl()
+		if err != nil {
+			return err
+		}
+	default:
+		validator(flg.stat, listAttribute)
 	}
 
-	return v, nil
+	return nil
 }
 
-func listColl(svc status.CommonFeature) (interface{}, error) {
-	v, err := svc.ListColl()
-	if err != nil {
-		return v, err
+func infoDB(svc s.CommonFeature) error {
+	if err := requirementCheck(s.DRIVER); err != nil {
+		return err
 	}
-
-	return v, nil
-}
-
-func infoDB(svc status.CommonFeature) (interface{}, error) {
-	var v interface{}
 	var err error
-	if nsvc, supported := svc.(status.NoSQLFeature); supported {
-		str := fmt.Sprintf("%sInfo", flg.Stat)
+	if nsvc, supported := svc.(s.NoSQLFeature); supported {
+		str := fmt.Sprintf("%sInfo", flg.stat)
 		valid := false
 		for k := range listInfo {
-			if flg.Stat == k {
-				v, err = nsvc.Info(str)
+			if flg.stat == k {
+				err = nsvc.Info(str)
 				if err != nil {
-					return v, err
+					return err
 				}
 				valid = true
-				break
+				return nil
 			}
 		}
 		if !valid {
-			validator(flg.Stat, listInfo)
+			validator(flg.stat, listInfo)
 		}
 	} else {
-		fmt.Printf("--%s : selected info not available\n", config["driver"])
+		fmt.Printf("--%s : selected info not available\n", config[s.DRIVER])
 	}
-	return v, nil
+	return nil
 }
 
-func statusDB(svc status.CommonFeature) (interface{}, error) {
-	var v interface{}
+func statusDB(svc s.CommonFeature) error {
+	if err := requirementCheck(s.DRIVER); err != nil {
+		return err
+	}
 	var err error
-	nsvc, noSQL := svc.(status.NoSQLFeature)
-	switch flg.Stat {
-	case "coll":
-		if noSQL {
-			v, err = nsvc.CollStats()
-			if err != nil {
-				return v, err
+	valid := false
+	if flg.stat == DISK {
+		if flg.statType == COLL {
+			if err := requirementCheck(s.COLLECTION); err != nil {
+				return err
 			}
 		}
-	case "db":
-		if noSQL {
-			v, err = nsvc.DbStats()
-			if err != nil {
-				return v, err
-			}
-		}
-	case "disk":
-		if ssvc, sql := svc.(status.SQLFeature); sql {
-			if flg.StatType == "" {
-				flg.StatType = "db"
-			}
-			valid := false
-			for k := range listStatusType {
-				if flg.StatType == k {
-					v, err = ssvc.DiskSpace(flg.StatType)
-					if err != nil {
-						return v, err
-					}
-					valid = true
-					break
+		for k := range listStatusType {
+			if flg.statType == k {
+				err = svc.DiskSpace(k)
+				if err != nil {
+					return err
 				}
-			}
-			if !valid {
-				validator(flg.StatType, listStatusType)
+				valid = true
+				return nil
 			}
 		}
-	default:
-		validator(flg.Stat, listStatus)
+		if !valid {
+			validator(flg.statType, listStatusType)
+		}
+	} else {
+		fmt.Printf("--%s : selected info not available\n", config[s.DRIVER])
 	}
-	if v == nil {
-		fmt.Printf("--%s : selected status not available\n", config["driver"])
-		return v, nil
-	}
-	return v, nil
+	return nil
 }

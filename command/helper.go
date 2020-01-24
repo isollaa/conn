@@ -5,29 +5,30 @@ import (
 	"fmt"
 
 	"github.com/hokaccha/go-prettyjson"
+	s "github.com/isollaa/conn/status"
+	m "github.com/isollaa/conn/status/mongo"
+	"github.com/isollaa/conn/status/sql"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh/terminal"
 )
 
 var listInfo = map[string]string{
-	"build": "build info of selected server",
-	"host":  "host info of selected server",
+	BUILD: "build info of selected server",
+	HOST:  "host info of selected server",
 }
 
 var listAttribute = map[string]string{
-	"db":   "list databases on selected driver",
-	"coll": "list collection on selected database",
+	DB:   "list databases on selected driver",
+	COLL: "list collection on selected database",
 }
 
 var listStatus = map[string]string{
-	"db":   "status of selected database",
-	"coll": "status of selected collection",
-	"disk": "status of disk space",
+	DISK: "status of disk space (postgres only)",
 }
 
 var listStatusType = map[string]string{
-	"db":   "status of selected database",
-	"coll": "status of selected collection",
+	DB:   "status of selected database",
+	COLL: "status of selected collection",
 }
 
 func validator(flg string, list map[string]string) {
@@ -38,10 +39,74 @@ func validator(flg string, list map[string]string) {
 	println()
 }
 
-func requirementCheck(cmd *cobra.Command) error {
-	if config["driver"] == "" || flg.Stat == "" {
-		err := fmt.Sprintf("Error: command needs flag with argument: -d -i\nUsage:\n\tapp %s [flags][flags]\n\nUse app --help to show help for status\n", cmd.Use)
-		return errors.New(err)
+func requirementCheck(arg ...string) error {
+	length := len(arg)
+	for k, v := range arg {
+		err := configCheck(k, length, v)
+		if err != nil {
+			return err
+		}
+		err = flagCheck(k, length, v)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func flagCheck(key, length int, value string) error {
+	flag := ""
+	switch value {
+	case STAT:
+		if flg.stat == "" {
+			flag = "-i"
+		}
+	case STATTYPE:
+		if flg.statType == "" {
+			flag = "-t"
+		}
+	case PRETTY:
+		if !flg.pretty {
+			flag = "-b"
+		}
+	case PROMPT:
+		if !flg.prompt {
+			flag = "-p"
+		}
+	}
+	if flag != "" {
+		if key == length-1 {
+			return fmt.Errorf("Command needs flag with argument: %s `%s`", flag, value)
+		}
+		fmt.Printf("Command needs flag with argument: %s `%s`", flag, value)
+	}
+	return nil
+}
+
+func configCheck(key, length int, value string) error {
+	flag := ""
+	if config[value] == "" {
+		switch value {
+		case s.DRIVER:
+			flag = "-d"
+		case s.HOST:
+			flag = "-H"
+		case s.PORT:
+			flag = "-P"
+		case s.USERNAME:
+			flag = "-u"
+		case s.PASSWORD:
+			flag = "-p"
+		case s.DBNAME:
+			flag = "--dbname"
+		case s.COLLECTION:
+			flag = "-c"
+		}
+		if key == length-1 {
+			return fmt.Errorf("Command needs flag with argument: %s `%s`", flag, value)
+		}
+		fmt.Printf("Command needs flag with argument: %s `%s`", flag, value)
 	}
 	return nil
 }
@@ -52,45 +117,42 @@ func promptPassword() error {
 	if err != nil {
 		return err
 	}
-	config["password"] = string(passDb)
+	config[s.PASSWORD] = string(passDb)
 	println()
 	return nil
 }
 
 func checkAutoFill() {
-	if config["host"] == "" {
-		config["host"] = "localhost"
-	}
-	switch config["driver"] {
+	switch config[s.DRIVER] {
 	case "mongo":
-		if config["port"] == "" {
-			config["port"] = "27017"
+		if config[s.PORT] == 0 {
+			config[s.PORT] = 27017
 		}
-		if config["dbName"] == "" {
-			config["dbName"] = "xsaas_ctms"
+		if config[s.DBNAME] == "" {
+			config[s.DBNAME] = "xsaas_ctms"
 		}
 	case "mysql":
-		if config["port"] == "" {
-			config["port"] = "3306"
+		if config[s.PORT] == 0 {
+			config[s.PORT] = 3306
 		}
-		if config["dbName"] == "" {
-			config["dbName"] = "mqtt"
+		if config[s.DBNAME] == "" {
+			config[s.DBNAME] = "mqtt"
 		}
-		if config["username"] == "" {
-			config["username"] = "root"
+		if config[s.USERNAME] == "" {
+			config[s.USERNAME] = "root"
 		}
 	case "postgres":
-		if config["port"] == "" {
-			config["port"] = "5432"
+		if config[s.PORT] == 0 {
+			config[s.PORT] = 5432
 		}
-		if config["dbName"] == "" {
-			config["dbName"] = "postgres"
+		if config[s.DBNAME] == "" {
+			config[s.DBNAME] = "postgres"
 		}
-		if config["username"] == "" {
-			config["username"] = "postgres"
+		if config[s.USERNAME] == "" {
+			config[s.USERNAME] = "postgres"
 		}
-		if config["password"] == "" {
-			config["password"] = "12345"
+		if config[s.PASSWORD] == "" {
+			config[s.PASSWORD] = "12345"
 		}
 	}
 }
@@ -104,21 +166,52 @@ func printPretty(result interface{}) error {
 	return nil
 }
 
-func doPrint(result interface{}) error {
-	if flg.Pretty {
-		if err := printPretty(result); err != nil {
+func doPrint(svc s.CommonFeature) error {
+	var res interface{}
+	if ss, ok := svc.(*m.Mongo); ok {
+		res = ss.Result
+	} else {
+		ss := svc.(*sql.SQL)
+		res = ss.Result
+	}
+
+	if flg.pretty {
+		if err := printPretty(res); err != nil {
 			return err
 		}
 		return nil
 	}
 
-	fmt.Printf("%v\n", result)
+	fmt.Printf("%v\n", res)
 	return nil
 }
 
-func getFlags(cmd *cobra.Command) {
+func getFlags(cmd *cobra.Command) error {
 	for key := range config {
-		v, _ := cmd.Flags().GetString(key)
+		if key == s.PASSWORD {
+			continue
+		}
+		v, err := cmd.Flags().GetString(key)
+		if err != nil {
+			v, err := cmd.Flags().GetInt(key)
+			if err != nil {
+				v, err := cmd.Flags().GetFloat64(key)
+				if err != nil {
+					v, err := cmd.Flags().GetBool(key)
+					if err != nil {
+						return errors.New(fmt.Sprintf("flag %s doesn't exist", key))
+					}
+					config[key] = v
+					continue
+				}
+				config[key] = v
+				continue
+			}
+			config[key] = v
+			continue
+		}
 		config[key] = v
+		continue
 	}
+	return nil
 }

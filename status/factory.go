@@ -2,39 +2,19 @@ package status
 
 import (
 	"log"
-
-	"github.com/globalsign/mgo/bson"
 )
 
-// type Attribute struct {
-// 	DBName     string
-// 	Collection string
-// }
-
-// type Config struct {
-// 	Host     string
-// 	Username string
-// 	Password string
-// 	*Attribute
-// }
-
 type CommonFeature interface {
-	// Connect(*Config) error
-	Connect(map[string]string) error
+	Connect(Config) error
 	Close()
-	Ping() (string, error)
-	ListDB() ([]string, error)
-	ListColl() ([]string, error)
+	Ping() error
+	ListDB() error
+	ListColl() error
+	DiskSpace(info string) error
 }
 
 type NoSQLFeature interface {
-	DbStats() (bson.M, error)
-	Info(info string) (bson.M, error)
-	CollStats() (bson.M, error)
-}
-
-type SQLFeature interface {
-	DiskSpace(info string) (string, error)
+	Info(info string) error
 }
 
 type factory func() CommonFeature

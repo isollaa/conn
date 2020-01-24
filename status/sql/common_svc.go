@@ -2,40 +2,43 @@ package sql
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 
 	_ "github.com/go-sql-driver/mysql"
 
 	"github.com/isollaa/conn/status"
+	s "github.com/isollaa/conn/status"
 )
 
 type SQL struct {
 	Driver     string
 	DBName     string
 	Collection string
+	Result     interface{}
 	Session    *sql.DB
 }
 
-var cfg *Config
+var cfg *SQLConf
 
-func (m *SQL) Connect(c map[string]string) error {
+func (m *SQL) Connect(c s.Config) error {
 	var err error
-	cfg = &Config{
-		Driver:     c["driver"],
-		Host:       c["host"],
-		Port:       c["port"],
-		Username:   c["username"],
-		Password:   c["password"],
-		DBName:     c["dbName"],
-		Collection: c["collection"],
+	cfg = &SQLConf{
+		s.DRIVER:     c.GetString(s.DRIVER),
+		s.HOST:       c.GetString(s.HOST),
+		s.PORT:       c.GetInt(s.PORT),
+		s.USERNAME:   c.GetString(s.USERNAME),
+		s.PASSWORD:   c.GetString(s.PASSWORD),
+		s.DBNAME:     c.GetString(s.DBNAME),
+		s.COLLECTION: c.GetString(s.COLLECTION),
 	}
-	m.Session, err = sql.Open(cfg.Driver, cfg.GetSource())
+	m.Session, err = sql.Open(c.GetString(s.DRIVER), cfg.GetSource())
 	if err != nil {
 		return err
 	}
-	m.Driver = cfg.Driver
-	m.DBName = cfg.DBName
-	m.Collection = cfg.Collection
+	m.Driver = c.GetString(s.DRIVER)
+	m.DBName = c.GetString(s.DBNAME)
+	m.Collection = c.GetString(s.COLLECTION)
 	return nil
 }
 
@@ -43,38 +46,38 @@ func (m *SQL) Close() {
 	defer m.Session.Close()
 }
 
-func (m *SQL) Ping() (string, error) {
+func (m *SQL) Ping() error {
 	err := m.Session.Ping()
 	if err != nil {
-		return "", err
+		return err
 	}
-
-	return fmt.Sprintf("-- %s server is ok.", m.Driver), nil
+	m.Result = fmt.Sprintf("-- %s server is ok.", m.Driver)
+	return nil
 }
 
-func (m *SQL) ListDB() ([]string, error) {
-	dbNames := []string{}
+func (m *SQL) ListDB() error {
 	rows, err := m.Session.Query(cfg.GetQueryDB())
 	if err != nil {
-		return dbNames, err
+		return err
 	}
 	defer rows.Close()
+	dbNames := []string{}
 	for rows.Next() {
 		dbName := ""
 		err = rows.Scan(&dbName)
 		if err != nil {
-			return dbNames, err
+			return err
 		}
 		dbNames = append(dbNames, dbName)
 	}
-	return dbNames, nil
+	return nil
 }
 
-func (m *SQL) ListColl() ([]string, error) {
+func (m *SQL) ListColl() error {
 	tables := []string{}
 	rows, err := m.Session.Query(cfg.GetQueryTable())
 	if err != nil {
-		return tables, err
+		return err
 	}
 	defer rows.Close()
 	for rows.Next() {
@@ -82,31 +85,33 @@ func (m *SQL) ListColl() ([]string, error) {
 		rows.Scan(&table)
 		tables = append(tables, table)
 	}
-	return tables, nil
+	m.Result = tables
+	return nil
 }
 
-// func (m *mysql) CollData() error {
-// 	var (
-// 		result  interface{}
-// 		results []interface{}
-// 	)
-// 	rows, err := m.Session.Query("SELECT * FROM " + m.Table)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	defer rows.Close()
-// 	for rows.Next() {
-// 		err = rows.Scan(&result)
-// 		if err != nil {
-// 			return err
-// 		}
-// 		results = append(results, result)
-// 	}
-
-// 	v, _ := prettyjson.Marshal(results)
-// 	fmt.Println("Results All: ", string(v))
-// 	return nil
-// }
+func (m *SQL) DiskSpace(info string) error {
+	v, err := cfg.GetDiskSpace(info)
+	if err != nil {
+		return err
+	}
+	row, err := m.Session.Query(v["query"])
+	if err != nil {
+		return err
+	}
+	defer row.Close()
+	table := ""
+	for row.Next() {
+		row.Scan(&table)
+	}
+	if table == "" {
+		return errors.New("data not found")
+	}
+	if m.Driver == "mysql" {
+		table = table + " kB"
+	}
+	m.Result = fmt.Sprintf("%s, Disk Size: %s", v["title"], table)
+	return nil
+}
 
 func New() status.CommonFeature {
 	return &SQL{}
