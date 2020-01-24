@@ -1,7 +1,6 @@
 package command
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/hokaccha/go-prettyjson"
@@ -191,27 +190,23 @@ func getFlags(cmd *cobra.Command) error {
 		if key == s.PASSWORD {
 			continue
 		}
-		v, err := cmd.Flags().GetString(key)
-		if err != nil {
-			v, err := cmd.Flags().GetInt(key)
-			if err != nil {
-				v, err := cmd.Flags().GetFloat64(key)
-				if err != nil {
-					v, err := cmd.Flags().GetBool(key)
-					if err != nil {
-						return errors.New(fmt.Sprintf("flag %s doesn't exist", key))
-					}
-					config[key] = v
-					continue
-				}
-				config[key] = v
-				continue
-			}
-			config[key] = v
+		if _, ok := config[key].(string); ok {
+			config[key], _ = cmd.Flags().GetString(key)
 			continue
 		}
-		config[key] = v
-		continue
+		if _, ok := config[key].(int); ok {
+			config[key], _ = cmd.Flags().GetInt(key)
+			continue
+		}
+		if _, ok := config[key].(float64); ok {
+			config[key], _ = cmd.Flags().GetFloat64(key)
+			continue
+		}
+		if _, ok := config[key].(bool); ok {
+			config[key], _ = cmd.Flags().GetBool(key)
+			continue
+		}
+		return fmt.Errorf("flag %s doesn't exist", key)
 	}
 	return nil
 }
