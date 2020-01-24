@@ -66,6 +66,8 @@ func (c SQLConf) GetDiskSpace(info string) (map[string]string, error) {
 			v["title"] = fmt.Sprintf("Table - %s", c[s.COLLECTION])
 		}
 		v["query"] = fmt.Sprintf("SELECT pg_size_pretty(%s('%s'))", info, c[s.DBNAME])
+	default:
+		return v, errors.New("disk status not available")
 	}
 	return v, nil
 }
