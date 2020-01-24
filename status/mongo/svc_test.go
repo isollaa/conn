@@ -1,13 +1,14 @@
 package mongo
 
 import (
+	s "github.com/isollaa/conn/status"
 	"testing"
 )
 
 const (
 	driver     = "mongo"
 	host       = "localhost"
-	port       = "27017"
+	port       = 27017
 	username   = ""
 	password   = ""
 	dbName     = "xsaas_ctms"
@@ -17,7 +18,7 @@ const (
 var m Mongo
 
 func TestConnect(t *testing.T) {
-	m.Connect(map[string]string{
+	m.Connect(s.Config{
 		"driver":     driver,
 		"host":       host,
 		"port":       port,
@@ -46,13 +47,14 @@ func TestListColl(t *testing.T) {
 	m.ListColl()
 }
 
-func TestDBStats(t *testing.T) {
+func TestDiskSpace(t *testing.T) {
 	TestConnect(t)
 	defer m.Close()
-	m.DbStats()
+	m.DiskSpace("db")
 }
-func TestCollStats(t *testing.T) {
+
+func TestInfo(t *testing.T) {
 	TestConnect(t)
 	defer m.Close()
-	m.CollStats()
+	m.Info("hostInfo")
 }

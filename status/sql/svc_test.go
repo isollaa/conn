@@ -1,6 +1,9 @@
 package sql
 
-import "testing"
+import (
+	s "github.com/isollaa/conn/status"
+	"testing"
+)
 
 const (
 	driver     = /* "mysql"  */ "postgres"
@@ -15,7 +18,7 @@ const (
 var m SQL
 
 func TestConnect(t *testing.T) {
-	m.Connect(map[string]string{
+	m.Connect(s.Config{
 		"driver":     driver,
 		"host":       host,
 		"port":       port,
@@ -47,5 +50,5 @@ func TestListColl(t *testing.T) {
 func TestDiscSpace(t *testing.T) {
 	TestConnect(t)
 	defer m.Close()
-	m.DiskSpace("db")
+	m.DiskSpace("coll")
 }

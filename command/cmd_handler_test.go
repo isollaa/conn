@@ -1,15 +1,16 @@
 package command
 
 import (
-	"github.com/isollaa/conn/status"
-	"github.com/isollaa/conn/status/mongo"
 	"testing"
+
+	s "github.com/isollaa/conn/status"
+	"github.com/isollaa/conn/status/mongo"
 )
 
 const (
 	driver     = "mongo"
 	host       = "localhost"
-	port       = "27017"
+	port       = 27017
 	username   = ""
 	password   = ""
 	dbName     = "xsaas_ctms"
@@ -18,7 +19,7 @@ const (
 )
 
 var str = []string{"aku", "kamu", "dirimu", "bukan dirinya"}
-var svc status.CommonFeature
+var svc s.CommonFeature
 
 func TestPromptPassword(t *testing.T) {
 	promptPassword()
@@ -34,15 +35,16 @@ func TestPrintPretty(t *testing.T) {
 
 func TestConnect(t *testing.T) {
 	svc = &mongo.Mongo{}
-	svc.Connect(map[string]string{
+	config = s.Config{
 		"driver":     driver,
 		"host":       host,
 		"port":       port,
 		"username":   username,
 		"password":   password,
-		"dbName":     dbName,
+		"dbname":     dbName,
 		"collection": collection,
-	})
+	}
+	connect(svc)
 }
 
 func TestPing(t *testing.T) {
@@ -51,47 +53,42 @@ func TestPing(t *testing.T) {
 	ping(svc)
 }
 
-func TestListDB(t *testing.T) {
-	flg.Pretty = pretty
+func TestList(t *testing.T) {
+	flg.stat = DB
+	flg.pretty = pretty
 	TestConnect(t)
 	defer svc.Close()
-	listDB(svc)
-}
-
-func TestListColl(t *testing.T) {
-	flg.Pretty = pretty
-	TestConnect(t)
-	defer svc.Close()
-	listColl(svc)
+	list(svc)
 }
 
 func TestHostInfo(t *testing.T) {
-	flg.Stat = "host"
-	flg.Pretty = pretty
+	flg.stat = HOST
+	flg.pretty = pretty
 	TestConnect(t)
 	defer svc.Close()
 	infoDB(svc)
 }
 
 func TestBuildInfo(t *testing.T) {
-	flg.Stat = "build"
-	flg.Pretty = pretty
+	flg.stat = HOST
+	flg.pretty = pretty
 	TestConnect(t)
 	defer svc.Close()
 	infoDB(svc)
 }
 
 func TestDBStats(t *testing.T) {
-	flg.Stat = "dbstats"
-	flg.Pretty = pretty
+	flg.stat = DISK
+	flg.statType = DB
+	flg.pretty = pretty
 	TestConnect(t)
 	defer svc.Close()
 	statusDB(svc)
 }
 
 func TestCollStats(t *testing.T) {
-	flg.Stat = "collstats"
-	flg.Pretty = pretty
+	flg.stat = COLL
+	flg.pretty = pretty
 	TestConnect(t)
 	defer svc.Close()
 	statusDB(svc)
