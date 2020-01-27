@@ -46,13 +46,12 @@ func infoDB(c Config, svc s.CommonFeature) error {
 	if err := c.requirementCheck(cc.DRIVER); err != nil {
 		return err
 	}
-	var err error
 	if nsvc, supported := svc.(s.NoSQLFeature); supported {
 		str := fmt.Sprintf("%sInfo", c[cc.STAT])
 		valid := false
 		for k := range listInfo {
 			if c[cc.STAT] == k {
-				err = nsvc.Info(str)
+				err := nsvc.Info(str)
 				if err != nil {
 					return err
 				}
@@ -73,7 +72,6 @@ func statusDB(c Config, svc s.CommonFeature) error {
 	if err := c.requirementCheck(cc.DRIVER); err != nil {
 		return err
 	}
-	var err error
 	valid := false
 	if c[cc.STAT] == DISK {
 		if c[cc.DRIVER] == "postgres" {
@@ -88,7 +86,7 @@ func statusDB(c Config, svc s.CommonFeature) error {
 		}
 		for k := range listStatusType {
 			if c[cc.TYPE] == k {
-				err = svc.DiskSpace(k)
+				err := svc.DiskSpace(k)
 				if err != nil {
 					return err
 				}
