@@ -5,6 +5,7 @@ import (
 
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
+	cc "github.com/isollaa/conn/config"
 	s "github.com/isollaa/conn/status"
 )
 
@@ -15,14 +16,14 @@ type Mongo struct {
 	Session    *mgo.Session
 }
 
-func (m *Mongo) Connect(c s.Config) error {
-	source := fmt.Sprintf("%s:%d", c.GetString(s.HOST), c.GetInt(s.PORT))
+func (m *Mongo) Connect(c cc.Config) error {
+	source := fmt.Sprintf("%s:%d", c.GetString(cc.HOST), c.GetInt(cc.PORT))
 	session, err := mgo.Dial(source)
 	if err != nil {
 		return err
 	}
-	m.DBName = c.GetString(s.DBNAME)
-	m.Collection = c.GetString(s.COLLECTION)
+	m.DBName = c.GetString(cc.DBNAME)
+	m.Collection = c.GetString(cc.COLLECTION)
 	m.Session = session
 	return nil
 }

@@ -1,8 +1,9 @@
 package sql
 
 import (
-	s "github.com/isollaa/conn/status"
 	"testing"
+
+	cc "github.com/isollaa/conn/config"
 )
 
 const (
@@ -18,7 +19,7 @@ const (
 var m SQL
 
 func TestConnect(t *testing.T) {
-	m.Connect(s.Config{
+	m.Connect(cc.Config{
 		"driver":     driver,
 		"host":       host,
 		"port":       port,

@@ -3,6 +3,7 @@ package command
 import (
 	"log"
 
+	cc "github.com/isollaa/conn/config"
 	"github.com/spf13/cobra"
 )
 
@@ -12,12 +13,8 @@ var cmdPing = cobra.Command{
 	Use:   "ping",
 	Short: "Check ping of selected connection",
 	Run: func(cmd *cobra.Command, args []string) {
-		err := getFlags(cmd)
-		if err != nil {
-			log.Print("unable to get flag: ", err)
-			return
-		}
-		doCommand(ping)
+		c := doConfig(cmd)
+		c.doCommand(ping)
 	},
 }
 
@@ -25,16 +22,12 @@ var cmdDB = cobra.Command{
 	Use:   "list",
 	Short: "list available database attributes",
 	Run: func(cmd *cobra.Command, args []string) {
-		err := getFlags(cmd)
-		if err != nil {
-			log.Print("unable to get flag: ", err)
-			return
-		}
-		if err := requirementCheck(STAT); err != nil {
+		c := doConfig(cmd)
+		if err := c.requirementCheck(cc.STAT); err != nil {
 			log.Print("error: ", err)
 			return
 		}
-		doCommand(list)
+		c.doCommand(list)
 	},
 }
 
@@ -42,16 +35,12 @@ var cmdInfo = cobra.Command{
 	Use:   "info",
 	Short: "Get information of selected connection",
 	Run: func(cmd *cobra.Command, args []string) {
-		err := getFlags(cmd)
-		if err != nil {
-			log.Print("unable to get flag: ", err)
-			return
-		}
-		if err := requirementCheck(STAT); err != nil {
+		c := doConfig(cmd)
+		if err := c.requirementCheck(cc.STAT); err != nil {
 			log.Print("error: ", err)
 			return
 		}
-		doCommand(infoDB)
+		c.doCommand(infoDB)
 	},
 }
 
@@ -59,16 +48,12 @@ var cmdStatus = cobra.Command{
 	Use:   "status",
 	Short: "Get status of selected connection",
 	Run: func(cmd *cobra.Command, args []string) {
-		err := getFlags(cmd)
-		if err != nil {
-			log.Print("unable to get flag: ", err)
-			return
-		}
-		if err := requirementCheck(STAT); err != nil {
+		c := doConfig(cmd)
+		if err := c.requirementCheck(cc.STAT); err != nil {
 			log.Print("error: ", err)
 			return
 		}
-		doCommand(statusDB)
+		c.doCommand(statusDB)
 	},
 }
 
@@ -80,12 +65,12 @@ func init() {
 	rootCmd.PersistentFlags().StringP("username", "u", "", "database username (default- mysql: root / postgres: postgres)")
 	rootCmd.PersistentFlags().String("dbname", "", "connection database name (default- mongo:xsaas_ctms / mysql:mqtt)")
 	rootCmd.PersistentFlags().StringP("collection", "c", "", "connection database collection name")
-	rootCmd.PersistentFlags().StringVarP(&flg.stat, "info", "i", "", "connection information")
-	rootCmd.PersistentFlags().StringVarP(&flg.statType, "type", "t", "", "connection information type")
+	rootCmd.PersistentFlags().StringP("stat", "s", "", "connection information")
+	rootCmd.PersistentFlags().StringP("type", "t", "", "connection information type")
 
 	//optional
-	rootCmd.PersistentFlags().BoolVarP(&flg.pretty, "beautify", "b", false, "show pretty version of json")
-	rootCmd.PersistentFlags().BoolVarP(&flg.prompt, "password", "p", false, "call password prompt")
+	rootCmd.PersistentFlags().BoolP("beauty", "b", false, "show pretty version of json")
+	rootCmd.PersistentFlags().BoolP("prompt", "p", false, "call password prompt")
 }
 
 func Exec() {

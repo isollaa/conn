@@ -4,16 +4,16 @@ import (
 	"fmt"
 
 	"github.com/hokaccha/go-prettyjson"
+	cc "github.com/isollaa/conn/config"
 	s "github.com/isollaa/conn/status"
 	m "github.com/isollaa/conn/status/mongo"
 	"github.com/isollaa/conn/status/sql"
-	"github.com/spf13/cobra"
-	"golang.org/x/crypto/ssh/terminal"
 )
 
 var listInfo = map[string]string{
-	BUILD: "build info of selected server",
-	HOST:  "host info of selected server",
+	SERVER: "server info of selected driver",
+	BUILD:  "build info of selected driver",
+	HOST:   "host info of selected driver",
 }
 
 var listAttribute = map[string]string{
@@ -38,124 +38,6 @@ func validator(flg string, list map[string]string) {
 	println()
 }
 
-func requirementCheck(arg ...string) error {
-	length := len(arg)
-	for k, v := range arg {
-		err := configCheck(k, length, v)
-		if err != nil {
-			return err
-		}
-		err = flagCheck(k, length, v)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func flagCheck(key, length int, value string) error {
-	flag := ""
-	switch value {
-	case STAT:
-		if flg.stat == "" {
-			flag = "-i"
-		}
-	case STATTYPE:
-		if flg.statType == "" {
-			flag = "-t"
-		}
-	case PRETTY:
-		if !flg.pretty {
-			flag = "-b"
-		}
-	case PROMPT:
-		if !flg.prompt {
-			flag = "-p"
-		}
-	}
-	if flag != "" {
-		if key == length-1 {
-			return fmt.Errorf("Command needs flag with argument: %s `%s`", flag, value)
-		}
-		fmt.Printf("Command needs flag with argument: %s `%s`", flag, value)
-	}
-	return nil
-}
-
-func configCheck(key, length int, value string) error {
-	flag := ""
-	if config[value] == "" {
-		switch value {
-		case s.DRIVER:
-			flag = "-d"
-		case s.HOST:
-			flag = "-H"
-		case s.PORT:
-			flag = "-P"
-		case s.USERNAME:
-			flag = "-u"
-		case s.PASSWORD:
-			flag = "-p"
-		case s.DBNAME:
-			flag = "--dbname"
-		case s.COLLECTION:
-			flag = "-c"
-		}
-		if key == length-1 {
-			return fmt.Errorf("Command needs flag with argument: %s `%s`", flag, value)
-		}
-		fmt.Printf("Command needs flag with argument: %s `%s`", flag, value)
-	}
-	return nil
-}
-
-func promptPassword() error {
-	print("Input database password : ")
-	passDb, err := terminal.ReadPassword(0)
-	if err != nil {
-		return err
-	}
-	config[s.PASSWORD] = string(passDb)
-	println()
-	return nil
-}
-
-func checkAutoFill() {
-	switch config[s.DRIVER] {
-	case "mongo":
-		if config[s.PORT] == 0 {
-			config[s.PORT] = 27017
-		}
-		if config[s.DBNAME] == "" {
-			config[s.DBNAME] = "xsaas_ctms"
-		}
-	case "mysql":
-		if config[s.PORT] == 0 {
-			config[s.PORT] = 3306
-		}
-		if config[s.DBNAME] == "" {
-			config[s.DBNAME] = "mqtt"
-		}
-		if config[s.USERNAME] == "" {
-			config[s.USERNAME] = "root"
-		}
-	case "postgres":
-		if config[s.PORT] == 0 {
-			config[s.PORT] = 5432
-		}
-		if config[s.DBNAME] == "" {
-			config[s.DBNAME] = "postgres"
-		}
-		if config[s.USERNAME] == "" {
-			config[s.USERNAME] = "postgres"
-		}
-		if config[s.PASSWORD] == "" {
-			config[s.PASSWORD] = "12345"
-		}
-	}
-}
-
 func printPretty(result interface{}) error {
 	v, err := prettyjson.Marshal(result)
 	if err != nil {
@@ -165,7 +47,7 @@ func printPretty(result interface{}) error {
 	return nil
 }
 
-func doPrint(svc s.CommonFeature) error {
+func doPrint(c Config, svc s.CommonFeature) error {
 	var res interface{}
 	if ss, ok := svc.(*m.Mongo); ok {
 		res = ss.Result
@@ -174,7 +56,7 @@ func doPrint(svc s.CommonFeature) error {
 		res = ss.Result
 	}
 
-	if flg.pretty {
+	if c[cc.BEAUTY].(bool) {
 		if err := printPretty(res); err != nil {
 			return err
 		}
@@ -182,31 +64,5 @@ func doPrint(svc s.CommonFeature) error {
 	}
 
 	fmt.Printf("%v\n", res)
-	return nil
-}
-
-func getFlags(cmd *cobra.Command) error {
-	for key := range config {
-		if key == s.PASSWORD {
-			continue
-		}
-		if _, ok := config[key].(string); ok {
-			config[key], _ = cmd.Flags().GetString(key)
-			continue
-		}
-		if _, ok := config[key].(int); ok {
-			config[key], _ = cmd.Flags().GetInt(key)
-			continue
-		}
-		if _, ok := config[key].(float64); ok {
-			config[key], _ = cmd.Flags().GetFloat64(key)
-			continue
-		}
-		if _, ok := config[key].(bool); ok {
-			config[key], _ = cmd.Flags().GetBool(key)
-			continue
-		}
-		return fmt.Errorf("flag %s doesn't exist", key)
-	}
 	return nil
 }

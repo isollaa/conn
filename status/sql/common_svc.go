@@ -7,7 +7,7 @@ import (
 
 	_ "github.com/go-sql-driver/mysql"
 
-	"github.com/isollaa/conn/status"
+	cc "github.com/isollaa/conn/config"
 	s "github.com/isollaa/conn/status"
 )
 
@@ -21,24 +21,24 @@ type SQL struct {
 
 var cfg *SQLConf
 
-func (m *SQL) Connect(c s.Config) error {
+func (m *SQL) Connect(c cc.Config) error {
 	var err error
 	cfg = &SQLConf{
-		s.DRIVER:     c.GetString(s.DRIVER),
-		s.HOST:       c.GetString(s.HOST),
-		s.PORT:       c.GetInt(s.PORT),
-		s.USERNAME:   c.GetString(s.USERNAME),
-		s.PASSWORD:   c.GetString(s.PASSWORD),
-		s.DBNAME:     c.GetString(s.DBNAME),
-		s.COLLECTION: c.GetString(s.COLLECTION),
+		cc.DRIVER:     c.GetString(cc.DRIVER),
+		cc.HOST:       c.GetString(cc.HOST),
+		cc.PORT:       c.GetInt(cc.PORT),
+		cc.USERNAME:   c.GetString(cc.USERNAME),
+		cc.PASSWORD:   c.GetString(cc.PASSWORD),
+		cc.DBNAME:     c.GetString(cc.DBNAME),
+		cc.COLLECTION: c.GetString(cc.COLLECTION),
 	}
-	m.Session, err = sql.Open(c.GetString(s.DRIVER), cfg.GetSource())
+	m.Session, err = sql.Open(c.GetString(cc.DRIVER), cfg.GetSource())
 	if err != nil {
 		return err
 	}
-	m.Driver = c.GetString(s.DRIVER)
-	m.DBName = c.GetString(s.DBNAME)
-	m.Collection = c.GetString(s.COLLECTION)
+	m.Driver = c.GetString(cc.DRIVER)
+	m.DBName = c.GetString(cc.DBNAME)
+	m.Collection = c.GetString(cc.COLLECTION)
 	return nil
 }
 
@@ -113,6 +113,6 @@ func (m *SQL) DiskSpace(info string) error {
 	return nil
 }
 
-func New() status.CommonFeature {
+func New() s.CommonFeature {
 	return &SQL{}
 }

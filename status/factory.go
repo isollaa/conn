@@ -1,11 +1,12 @@
 package status
 
 import (
+	cc "github.com/isollaa/conn/config"
 	"log"
 )
 
 type CommonFeature interface {
-	Connect(Config) error
+	Connect(cc.Config) error
 	Close()
 	Ping() error
 	ListDB() error

@@ -2,138 +2,117 @@ package command
 
 import (
 	"fmt"
-	"log"
 
+	cc "github.com/isollaa/conn/config"
 	s "github.com/isollaa/conn/status"
+	"golang.org/x/crypto/ssh/terminal"
 )
 
-func doCommand(commandFunc func(s.CommonFeature) error) {
-	if err := requirementCheck(s.DRIVER); err != nil {
-		log.Print("error: ", err)
-		return
-	}
-	driver := config[s.DRIVER]
-	if driver == "postgres" || driver == "mysql" {
-		driver = "sql"
-	}
-	svc := s.New(driver.(string))
-	if err := connect(svc); err != nil {
-		log.Print("unable to connect: ", err)
-		return
-	}
-	defer svc.Close()
-	if err := commandFunc(svc); err != nil {
-		log.Print("error due executing command: ", err)
-		return
-	}
-	if err := doPrint(svc); err != nil {
-		log.Print("unable to print: ", err)
-		return
-	}
-}
-
-func connect(svc s.CommonFeature) error {
-	fmt.Printf("--%s\n", config[s.DRIVER])
-	if flg.prompt {
-		if err := promptPassword(); err != nil {
+func (c Config) connect(svc s.CommonFeature) error {
+	fmt.Printf("--%s\n", c[cc.DRIVER])
+	if c[cc.PROMPT].(bool) {
+		if err := c.promptPassword(); err != nil {
 			return err
 		}
 	}
-	checkAutoFill()
-	if err := svc.Connect(config); err != nil {
-		return err
-	}
-	return nil
-}
-
-func ping(svc s.CommonFeature) error {
-	log.Printf("Pinging %s ", config[s.HOST])
-	err := svc.Ping()
+	c.checkAutoFill()
+	err := svc.Connect(
+		cc.Config{
+			cc.DRIVER:     c[cc.DRIVER],
+			cc.HOST:       c[cc.HOST],
+			cc.PORT:       c[cc.PORT],
+			cc.USERNAME:   c[cc.USERNAME],
+			cc.PASSWORD:   c[cc.PASSWORD],
+			cc.DBNAME:     c[cc.DBNAME],
+			cc.COLLECTION: c[cc.COLLECTION],
+		})
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func list(svc s.CommonFeature) error {
-	if err := requirementCheck(s.DBNAME); err != nil {
-		return err
-	}
-	switch flg.stat {
-	case DB:
-		err := svc.ListDB()
-		if err != nil {
-			return err
+func (c Config) requirementCheck(arg ...string) error {
+	length := len(arg)
+	for k, v := range arg {
+		flag := ""
+		if c[v] == "" || c[v] == false {
+			switch v {
+			case cc.DRIVER:
+				flag = "-d"
+			case cc.HOST:
+				flag = "-H"
+			case cc.PORT:
+				flag = "-P"
+			case cc.USERNAME:
+				flag = "-u"
+			case cc.PASSWORD:
+				flag = "-p"
+			case cc.DBNAME:
+				flag = "--dbname"
+			case cc.COLLECTION:
+				flag = "-c"
+			case cc.STAT:
+				flag = "-s"
+			case cc.TYPE:
+				flag = "-t"
+			case cc.BEAUTY:
+				flag = "-b"
+			case cc.PROMPT:
+				flag = "-p"
+			}
+			if k == length-1 {
+				return fmt.Errorf("Command needs flag with argument: %s `%s`", flag, v)
+			}
+			fmt.Printf("Command needs flag with argument: %s `%s`", flag, v)
 		}
-	case COLL:
-		if err := requirementCheck(s.COLLECTION); err != nil {
-			return err
-		}
-		err := svc.ListColl()
-		if err != nil {
-			return err
-		}
-	default:
-		validator(flg.stat, listAttribute)
 	}
 
 	return nil
 }
 
-func infoDB(svc s.CommonFeature) error {
-	if err := requirementCheck(s.DRIVER); err != nil {
-		return err
-	}
-	var err error
-	if nsvc, supported := svc.(s.NoSQLFeature); supported {
-		str := fmt.Sprintf("%sInfo", flg.stat)
-		valid := false
-		for k := range listInfo {
-			if flg.stat == k {
-				err = nsvc.Info(str)
-				if err != nil {
-					return err
-				}
-				valid = true
-				return nil
-			}
+func (c Config) checkAutoFill() {
+	switch c[cc.DRIVER] {
+	case "mongo":
+		if c[cc.PORT] == 0 {
+			c[cc.PORT] = 27017
 		}
-		if !valid {
-			validator(flg.stat, listInfo)
+		if c[cc.DBNAME] == "" {
+			c[cc.DBNAME] = "xsaas_ctms"
 		}
-	} else {
-		fmt.Printf("--%s : selected info not available\n", config[s.DRIVER])
+	case "mysql":
+		if c[cc.PORT] == 0 {
+			c[cc.PORT] = 3306
+		}
+		if c[cc.DBNAME] == "" {
+			c[cc.DBNAME] = "mqtt"
+		}
+		if c[cc.USERNAME] == "" {
+			c[cc.USERNAME] = "root"
+		}
+	case "postgres":
+		if c[cc.PORT] == 0 {
+			c[cc.PORT] = 5432
+		}
+		if c[cc.DBNAME] == "" {
+			c[cc.DBNAME] = "postgres"
+		}
+		if c[cc.USERNAME] == "" {
+			c[cc.USERNAME] = "postgres"
+		}
+		if c[cc.PASSWORD] == "" {
+			c[cc.PASSWORD] = "12345"
+		}
 	}
-	return nil
 }
 
-func statusDB(svc s.CommonFeature) error {
-	if err := requirementCheck(s.DRIVER); err != nil {
+func (c Config) promptPassword() error {
+	print("Input database password : ")
+	passDb, err := terminal.ReadPassword(0)
+	if err != nil {
 		return err
 	}
-	var err error
-	valid := false
-	if flg.stat == DISK {
-		if flg.statType == COLL {
-			if err := requirementCheck(s.COLLECTION); err != nil {
-				return err
-			}
-		}
-		for k := range listStatusType {
-			if flg.statType == k {
-				err = svc.DiskSpace(k)
-				if err != nil {
-					return err
-				}
-				valid = true
-				return nil
-			}
-		}
-		if !valid {
-			validator(flg.statType, listStatusType)
-		}
-	} else {
-		fmt.Printf("--%s : selected info not available\n", config[s.DRIVER])
-	}
+	c[cc.PASSWORD] = string(passDb)
+	println()
 	return nil
 }
