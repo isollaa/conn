@@ -18,12 +18,12 @@ func ping(cfg c.Config, svc driver.CommonFeature) error {
 	return nil
 }
 
-func Command() *cobra.Command {
+func Command(cfg c.Config) *cobra.Command {
 	return &cobra.Command{
 		Use:   "ping",
 		Short: "Check ping of selected connection",
 		Run: func(cmd *cobra.Command, args []string) {
-			cfg := c.DoConfig(cmd)
+			cfg.SetFlag(cmd)
 			if err := cfg.RequirementCheck(config.DRIVER); err != nil {
 				log.Print("error: ", err)
 				return

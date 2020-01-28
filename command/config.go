@@ -19,7 +19,7 @@ const (
 
 type Config cc.Config
 
-func DoConfig(cmd *cobra.Command) Config {
+func SetConfig(cmd *cobra.Command) Config {
 	c := Config{
 		cc.DRIVER:     "",
 		cc.HOST:       "",
@@ -33,7 +33,6 @@ func DoConfig(cmd *cobra.Command) Config {
 		BEAUTY:        false,
 		PROMPT:        false,
 	}
-	c.setFlag(cmd)
 	return c
 }
 
@@ -66,7 +65,7 @@ func requirementCase(v string) string {
 	return flag
 }
 
-func (c Config) setFlag(cmd *cobra.Command) {
+func (c Config) SetFlag(cmd *cobra.Command) {
 	for key := range c {
 		if key == cc.PASSWORD {
 			continue
@@ -87,6 +86,6 @@ func (c Config) setFlag(cmd *cobra.Command) {
 			c[key] = v
 			continue
 		}
-		fmt.Printf("flag %s doesn't exist", key)
+		fmt.Printf("flag %s doesn't exist\n", key)
 	}
 }

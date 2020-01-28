@@ -36,12 +36,12 @@ func list(cfg c.Config, svc driver.CommonFeature) error {
 	return nil
 }
 
-func Command() *cobra.Command {
+func Command(cfg c.Config) *cobra.Command {
 	return &cobra.Command{
 		Use:   "list",
 		Short: "list available database attributes",
 		Run: func(cmd *cobra.Command, args []string) {
-			cfg := c.DoConfig(cmd)
+			cfg.SetFlag(cmd)
 			if err := cfg.RequirementCheck(config.DRIVER, config.DBNAME, c.STAT); err != nil {
 				log.Print("error: ", err)
 				return

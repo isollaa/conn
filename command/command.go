@@ -22,8 +22,10 @@ func initFlag(cmd *cobra.Command) {
 func Exec() {
 	rootCmd := &cobra.Command{Use: "app"}
 	initFlag(rootCmd)
+	c := SetConfig(rootCmd)
 	for _, v := range New() {
-		rootCmd.AddCommand(v())
+		rootCmd.AddCommand(v(c))
 	}
 	rootCmd.Execute()
+	// rootCmd.AddCommand(New(c)...)
 }
