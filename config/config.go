@@ -14,10 +14,6 @@ const (
 	PASSWORD   = "password"
 	DBNAME     = "dbname"
 	COLLECTION = "collection"
-	STAT       = "stat"
-	TYPE       = "type"
-	BEAUTY     = "beauty"
-	PROMPT     = "prompt"
 )
 
 func (c Config) GetString(key string) string {

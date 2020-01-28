@@ -5,100 +5,113 @@ import (
 	"log"
 
 	cc "github.com/isollaa/conn/config"
-	s "github.com/isollaa/conn/status"
+	d "github.com/isollaa/conn/driver"
+	m "github.com/isollaa/conn/driver/mongo"
+	"github.com/isollaa/conn/driver/sql"
+	"github.com/isollaa/conn/helper"
+	"golang.org/x/crypto/ssh/terminal"
 )
 
-func ping(c Config, svc s.CommonFeature) error {
-	log.Printf("Pinging %s ", c[cc.HOST])
-	err := svc.Ping()
+func (c Config) connect(svc d.CommonFeature) error {
+	fmt.Printf("--%s\n", c[cc.DRIVER])
+	if c[PROMPT].(bool) {
+		if err := c.promptPassword(); err != nil {
+			return err
+		}
+	}
+	cfg := cc.Config{
+		cc.DRIVER:     c[cc.DRIVER],
+		cc.HOST:       c[cc.HOST],
+		cc.PORT:       c[cc.PORT],
+		cc.USERNAME:   c[cc.USERNAME],
+		cc.PASSWORD:   c[cc.PASSWORD],
+		cc.DBNAME:     c[cc.DBNAME],
+		cc.COLLECTION: c[cc.COLLECTION],
+	}
+	svc.AutoFill(cfg)
+	err := svc.Connect(cfg)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func list(c Config, svc s.CommonFeature) error {
-	if err := c.requirementCheck(cc.DBNAME); err != nil {
-		return err
+func (c Config) DoCommand(commandFunc func(Config, d.CommonFeature) error) {
+	driver := c[cc.DRIVER]
+	if driver == "postgres" || driver == "mysql" {
+		driver = "sql"
 	}
-	switch c[cc.STAT] {
-	case DB:
-		err := svc.ListDB()
-		if err != nil {
-			return err
-		}
-	case COLL:
-		if err := c.requirementCheck(cc.COLLECTION); err != nil {
-			return err
-		}
-		err := svc.ListColl()
-		if err != nil {
-			return err
-		}
-	default:
-		validator(c[cc.STAT].(string), listAttribute)
+	svc := d.New(driver.(string))
+	if err := c.connect(svc); err != nil {
+		log.Print("unable to connect: ", err)
+		return
 	}
-
-	return nil
+	defer svc.Close()
+	if err := commandFunc(c, svc); err != nil {
+		log.Print("error due executing command: ", err)
+		return
+	}
+	if err := c.DoPrint(svc); err != nil {
+		log.Print("unable to print: ", err)
+		return
+	}
 }
 
-func infoDB(c Config, svc s.CommonFeature) error {
-	if err := c.requirementCheck(cc.DRIVER); err != nil {
-		return err
-	}
-	if nsvc, supported := svc.(s.NoSQLFeature); supported {
-		str := fmt.Sprintf("%sInfo", c[cc.STAT])
-		valid := false
-		for k := range listInfo {
-			if c[cc.STAT] == k {
-				err := nsvc.Info(str)
-				if err != nil {
-					return err
-				}
-				valid = true
-				return nil
-			}
+func (c Config) RequirementCheck(arg ...string) error {
+	length := len(arg)
+	for k, v := range arg {
+		flag := requirementCase(v)
+		msg := ""
+		switch c[v] {
+		case "", 0:
+			msg = fmt.Sprintf("Command needs flag with argument: %s `%s`\n", flag, v)
+		case false:
+			msg = fmt.Sprintf("Command needs flag: %s\n", flag)
 		}
-		if !valid {
-			validator(c[cc.STAT].(string), listInfo)
+		if k == length-1 && msg != "" {
+			return fmt.Errorf(msg)
 		}
-	} else {
-		fmt.Printf("--%s : selected info not available\n", c[cc.DRIVER])
+		// log.Print("error: ", msg)
 	}
 	return nil
 }
 
-func statusDB(c Config, svc s.CommonFeature) error {
-	if err := c.requirementCheck(cc.DRIVER); err != nil {
+func (c Config) promptPassword() error {
+	print("Input database password : ")
+	passDb, err := terminal.ReadPassword(0)
+	if err != nil {
 		return err
 	}
-	valid := false
-	if c[cc.STAT] == DISK {
-		if c[cc.DRIVER] == "postgres" {
-			if err := c.requirementCheck(cc.PROMPT); err != nil {
-				return err
-			}
-		}
-		if c[cc.TYPE] == COLL {
-			if err := c.requirementCheck(cc.COLLECTION); err != nil {
-				return err
-			}
-		}
-		for k := range listStatusType {
-			if c[cc.TYPE] == k {
-				err := svc.DiskSpace(k)
-				if err != nil {
-					return err
-				}
-				valid = true
-				return nil
-			}
-		}
-		if !valid {
-			validator(c[cc.TYPE].(string), listStatusType)
-		}
+	c[cc.PASSWORD] = string(passDb)
+	println()
+	return nil
+}
+
+func (c Config) DoPrint(svc d.CommonFeature) error {
+	var res interface{}
+	if ss, ok := svc.(*m.Mongo); ok {
+		res = ss.Result
 	} else {
-		fmt.Printf("--%s : selected info not available\n", c[cc.DRIVER])
+		ss := svc.(*sql.SQL)
+		res = ss.Result
 	}
+
+	if c[BEAUTY].(bool) {
+		if err := helper.PrintPretty(res); err != nil {
+			return err
+		}
+		return nil
+	}
+
+	fmt.Printf("%v\n", res)
+	return nil
+}
+
+func Validator(flg string, list map[string]string) error {
+	fmt.Printf("Error: flag with argument '%s' not found \n\nTry using:\n", flg)
+	for k, v := range list {
+		fmt.Printf("\t%s \t%s\n", k, v)
+	}
+	println()
 	return nil
 }

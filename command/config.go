@@ -2,25 +2,24 @@ package command
 
 import (
 	"fmt"
-	"log"
 
 	cc "github.com/isollaa/conn/config"
-	s "github.com/isollaa/conn/status"
 	"github.com/spf13/cobra"
 )
 
 const (
-	SERVER = "server"
-	BUILD  = "build"
-	HOST   = "host"
-	DB     = "db"
-	COLL   = "coll"
-	DISK   = "disk"
+	DB   = "db"
+	COLL = "coll"
+
+	STAT   = "stat"
+	TYPE   = "type"
+	BEAUTY = "beauty"
+	PROMPT = "prompt"
 )
 
 type Config cc.Config
 
-func doConfig(cmd *cobra.Command) Config {
+func DoConfig(cmd *cobra.Command) Config {
 	c := Config{
 		cc.DRIVER:     "",
 		cc.HOST:       "",
@@ -29,16 +28,45 @@ func doConfig(cmd *cobra.Command) Config {
 		cc.PASSWORD:   "",
 		cc.DBNAME:     "",
 		cc.COLLECTION: "",
-		cc.STAT:       "",
-		cc.TYPE:       "",
-		cc.BEAUTY:     false,
-		cc.PROMPT:     false,
+		STAT:          "",
+		TYPE:          "",
+		BEAUTY:        false,
+		PROMPT:        false,
 	}
-	c.SetFlag(cmd)
+	c.setFlag(cmd)
 	return c
 }
 
-func (c Config) SetFlag(cmd *cobra.Command) {
+func requirementCase(v string) string {
+	flag := ""
+	switch v {
+	case cc.DRIVER:
+		flag = "-d"
+	case cc.HOST:
+		flag = "-H"
+	case cc.PORT:
+		flag = "-P"
+	case cc.USERNAME:
+		flag = "-u"
+	case cc.PASSWORD:
+		flag = "-p"
+	case cc.DBNAME:
+		flag = "--dbname"
+	case cc.COLLECTION:
+		flag = "-c"
+	case STAT:
+		flag = "-s"
+	case TYPE:
+		flag = "-t"
+	case BEAUTY:
+		flag = "-b"
+	case PROMPT:
+		flag = "-p"
+	}
+	return flag
+}
+
+func (c Config) setFlag(cmd *cobra.Command) {
 	for key := range c {
 		if key == cc.PASSWORD {
 			continue
@@ -60,30 +88,5 @@ func (c Config) SetFlag(cmd *cobra.Command) {
 			continue
 		}
 		fmt.Printf("flag %s doesn't exist", key)
-	}
-}
-
-func (c Config) doCommand(commandFunc func(Config, s.CommonFeature) error) {
-	if err := c.requirementCheck(cc.DRIVER); err != nil {
-		log.Print("error: ", err)
-		return
-	}
-	driver := c[cc.DRIVER]
-	if driver == "postgres" || driver == "mysql" {
-		driver = "sql"
-	}
-	svc := s.New(driver.(string))
-	if err := c.connect(svc); err != nil {
-		log.Print("unable to connect: ", err)
-		return
-	}
-	defer svc.Close()
-	if err := commandFunc(c, svc); err != nil {
-		log.Print("error due executing command: ", err)
-		return
-	}
-	if err := doPrint(c, svc); err != nil {
-		log.Print("unable to print: ", err)
-		return
 	}
 }

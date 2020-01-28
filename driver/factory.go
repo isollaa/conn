@@ -1,13 +1,20 @@
-package status
+package driver
 
 import (
-	cc "github.com/isollaa/conn/config"
 	"log"
+
+	cc "github.com/isollaa/conn/config"
+	"github.com/isollaa/conn/helper"
 )
 
-type CommonFeature interface {
+type Initial interface {
+	AutoFill(cc.Config)
 	Connect(cc.Config) error
 	Close()
+}
+
+type CommonFeature interface {
+	Initial
 	Ping() error
 	ListDB() error
 	ListColl() error
@@ -24,7 +31,7 @@ var listFactory = make(map[string]factory)
 
 //auto register service by its package name
 func Register(list factory) {
-	name := getPackageName(list)
+	name := helper.GetPackageName(list)
 	if list == nil {
 		log.Panicf("Service %s does not exist.", name)
 	}
@@ -39,7 +46,7 @@ func Register(list factory) {
 func New(key string) CommonFeature {
 	run := listFactory[key]
 	if run == nil {
-		log.Fatalf("driver '%s' not available", key)
+		log.Fatalf("driver '%s' not available.\n\nUse `app [command] --help` for more information about a command. ", key)
 	}
 	return run()
 }

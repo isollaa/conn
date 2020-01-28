@@ -8,7 +8,7 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 
 	cc "github.com/isollaa/conn/config"
-	s "github.com/isollaa/conn/status"
+	s "github.com/isollaa/conn/driver"
 )
 
 type SQL struct {
@@ -20,6 +20,34 @@ type SQL struct {
 }
 
 var cfg *SQLConf
+
+func (m *SQL) AutoFill(c cc.Config) {
+	switch c[cc.DRIVER] {
+	case "mysql":
+		if c[cc.PORT] == 0 {
+			c[cc.PORT] = 3306
+		}
+		if c[cc.DBNAME] == "" {
+			c[cc.DBNAME] = "mqtt"
+		}
+		if c[cc.USERNAME] == "" {
+			c[cc.USERNAME] = "root"
+		}
+	case "postgres":
+		if c[cc.PORT] == 0 {
+			c[cc.PORT] = 5432
+		}
+		if c[cc.DBNAME] == "" {
+			c[cc.DBNAME] = "postgres"
+		}
+		if c[cc.USERNAME] == "" {
+			c[cc.USERNAME] = "postgres"
+		}
+		if c[cc.PASSWORD] == "" {
+			c[cc.PASSWORD] = "12345"
+		}
+	}
+}
 
 func (m *SQL) Connect(c cc.Config) error {
 	var err error

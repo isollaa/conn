@@ -6,7 +6,7 @@ import (
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
 	cc "github.com/isollaa/conn/config"
-	s "github.com/isollaa/conn/status"
+	s "github.com/isollaa/conn/driver"
 )
 
 type Mongo struct {
@@ -14,6 +14,15 @@ type Mongo struct {
 	Collection string
 	Result     interface{}
 	Session    *mgo.Session
+}
+
+func (m *Mongo) AutoFill(c cc.Config) {
+	if c[cc.PORT] == 0 {
+		c[cc.PORT] = 27017
+	}
+	if c[cc.DBNAME] == "" {
+		c[cc.DBNAME] = "xsaas_ctms"
+	}
 }
 
 func (m *Mongo) Connect(c cc.Config) error {
