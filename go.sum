@@ -16,6 +16,10 @@ github.com/hashicorp/hcl v1.0.0/go.mod h1:E5yfLk+7swimpb2L/Alb/PJmXilQ/rhwaUYs4T
 github.com/hokaccha/go-prettyjson v0.0.0-20190818114111-108c894c2c0e h1:0aewS5NTyxftZHSnFaJmWE5oCCrj4DyEXkAiMa1iZJM=
 github.com/hokaccha/go-prettyjson v0.0.0-20190818114111-108c894c2c0e/go.mod h1:pFlLw2CfqZiIBOx6BuCeRLCrfxBJipTY0nIOF/VbGcI=
 github.com/inconshreveable/mousetrap v1.0.0/go.mod h1:PxqpIevigyE2G7u3NXJIT2ANytuPF1OarO4DADm73n8=
+github.com/isollaa/conn v0.0.0-20200128153143-9262f5f5e924/go.mod h1:CIyP2RYrfjYp20FK2sLs8wc1/TlA16Yf1/NlXM/AUfc=
+github.com/isollaa/db-terminal v0.0.0-20200130074959-2cf6ebe5052d/go.mod h1:04TtqKJkExdbybDt3sEDmNd6u8Y0+oO3yssp8+3LVtk=
+github.com/isollaa/dbterm v0.0.0-20200130085936-5a90b8b1622e h1:VXPVXsBfkHm9WE5RZSV9ktP2okj8d0a90AJJbStFxPI=
+github.com/isollaa/dbterm v0.0.0-20200130085936-5a90b8b1622e/go.mod h1:ldDmV1UbWhMzbRwLEbAl7yUoDICi7fCeKiBy0nsut1U=
 github.com/lib/pq v1.3.0 h1:/qkRGz8zljWiDcFvgpwUpwIAPu3r07TDvs3Rws+o/pU=
 github.com/lib/pq v1.3.0/go.mod h1:5WUZQaWbwv1U+lTReE5YruASi9Al49XbQIvNi/34Woo=
 github.com/magiconair/properties v1.8.0/go.mod h1:PppfXfuXeibc/6YijjN8zIbojt8czPbwD3XqdrwzmxQ=

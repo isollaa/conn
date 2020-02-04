@@ -31,7 +31,7 @@ var listFactory = make(map[string]factory)
 
 //auto register service by its package name
 func Register(list factory) {
-	name := helper.GetPackageName(list)
+	name := helper.GetName(helper.PACKAGE, list)
 	if list == nil {
 		log.Panicf("Service %s does not exist.", name)
 	}

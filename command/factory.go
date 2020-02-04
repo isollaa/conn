@@ -12,7 +12,7 @@ type factory func(cfg Config) *cobra.Command
 var listCommand = make(map[string]factory)
 
 func Register(list factory) {
-	name := helper.GetPackageName(list)
+	name := helper.GetName(helper.PACKAGE, list)
 	ok := false
 	for k, _ := range listCommand {
 		if name != k {
